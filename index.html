@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unmuted | District Support Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #fdfcfb; --card: #ffffff; --text: #1e293b; --secondary: #64748b;
+            --gold: #d4af37; --danger: #f43f5e; --accent: #10b981; --warn: #f59e0b; --sro: #1e40af;
+        }
+        body { margin: 0; font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; overflow-x: hidden; }
+        
+        #quote-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            z-index: -1; pointer-events: none; padding: 40px; text-align: center;
+            transition: opacity 2s ease-in-out;
+        }
+        .bg-quote-text {
+            font-size: 2.5rem; font-weight: 600; color: #f1f5f9;
+            line-height: 1.2; text-transform: uppercase; letter-spacing: -1px;
+        }
+
+        #app-shell { width: 100%; max-width: 500px; min-height: 100vh; position: relative; background: rgba(253, 252, 251, 0.9); border-left: 1px solid #eee; border-right: 1px solid #eee; }
+        .glass-card { background: var(--card); padding: 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
+        input, textarea, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 12px; border: 1px solid #e2e8f0; box-sizing: border-box; font-family: inherit; font-size: 1rem; }
+        button { cursor: pointer; border: none; border-radius: 12px; font-weight: 600; padding: 14px; transition: 0.2s; font-family: inherit; width: 100%; }
+        .btn-primary { background: var(--gold); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-sro { background: var(--sro); color: white; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.98); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; box-sizing: border-box; }
+        nav { position: fixed; bottom: 0; width: 100%; max-width: 500px; background: white; display: none; justify-content: space-around; padding: 12px 0; border-top: 1px solid #f1f5f9; z-index: 2000; }
+        .nav-item { background: none; border: none; color: var(--secondary); font-size: 0.7rem; flex: 1; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+        .screen { display: none; padding: 20px; padding-bottom: 120px; animation: fadeIn 0.3s ease; }
+        @media print { .no-print { display: none !important; } #quote-bg { display: none; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body onmousemove="resetTimer()" onclick="resetTimer()" onkeypress="resetTimer()">
+
+<div id="quote-bg"><span class="bg-quote-text" id="active-quote">YOU ARE ENOUGH</span></div>
+
+<div id="lock-overlay" class="overlay"><h2>🔒 Access Revoked</h2><p>Student ID Locked for Policy Violation.</p><button class="btn-primary" onclick="location.reload()">Return to Gate</button></div>
+<div id="warning-overlay" class="overlay"><h2>⚠️ Final Warning</h2><p>Violation Detected. Posting this will permanently lock your ID.</p><button class="btn-danger" onclick="confirmPostAndLock()">Post & Lock My Access</button><button onclick="hideOverlay('warning-overlay')">Go Back & Edit</button></div>
+
+<div id="app-shell">
+    <div id="screen-gate" class="screen" style="display: block; text-align: center; padding-top: 60px;">
+        <span style="font-size:3.5rem;">💛</span><h1>Unmuted</h1>
+        <div class="glass-card"><input type="text" id="distCode" placeholder="District Code"><input type="number" id="loginID" placeholder="Student ID"><button class="btn-primary" onclick="handleLogin()">Login</button></div>
+        <p style="font-size:0.5rem; color:#f8f9fa; cursor:default;" onclick="adminGate()">.</p>
+    </div>
+
+    <div id="screen-consent" class="screen">
+        <div class="glass-card" style="border-top: 5px solid var(--gold);">
+            <h3>Identity Agreement</h3>
+            <p style="font-size:0.85rem; text-align:left;">Your identity is hidden from peers. However, <b>District Staff and Security will identify you</b> if posts involve threats, self-harm, or severe bullying.</p>
+            <button class="btn-primary" onclick="nav('profile')">I Agree & Enter</button>
+        </div>
+    </div>
+
+    <div id="screen-profile" class="screen">
+        <h3>Choose your Alias</h3>
+        <div class="glass-card">
+            <p style="font-size:0.8rem; color:var(--secondary);">This is the name others will see on the wall. Avoid using your real name.</p>
+            <input type="text" id="userAlias" placeholder="e.g. BraveEagle22">
+            <button class="btn-primary" onclick="saveProfile()">Save & Start Venting</button>
+        </div>
+    </div>
+
+    <div id="screen-wall" class="screen">
+        <h3>Vent Wall</h3><textarea id="vInput" placeholder="What's on your heart?" rows="3"></textarea><button class="btn-primary" onclick="prePostCheck()">Share Heart</button><div id="feed" style="margin-top:20px;"></div>
+    </div>
+
+    <div id="screen-security" class="screen">
+        <h3 style="color:var(--sro);">🛡️ SRO Threat Report</h3>
+        <div class="glass-card" style="border: 2px solid var(--sro);"><select id="threatType"><option>Physical Threat</option><option>Cyber Bullying</option><option>Self-Harm</option></select><textarea id="threatDetail" placeholder="Details..."></textarea><button class="btn-sro" onclick="submitSecurityReport()">Submit to SRO</button></div>
+    </div>
+
+    <div id="screen-admin" class="screen">
+        <h3 style="display:flex; justify-content:space-between;">Counselor Hub <button onclick="pardonStudent()" style="width:auto; padding:5px; font-size:0.7rem;">Pardon ID</button></h3>
+        <div id="admin-feed"></div>
+    </div>
+
+    <div id="screen-sro-dash" class="screen">
+        <div style="display:flex; justify-content:space-between;" class="no-print"><h3>🚨 Security Command</h3><button onclick="window.print()">🖨️ Print Log</button></div>
+        <div id="sro-log"></div>
+    </div>
+
+    <nav id="main-nav" class="no-print">
+        <button class="nav-item" onclick="nav('wall')">Wall</button>
+        <button class="nav-item" onclick="nav('security')">Security</button>
+        <button class="nav-item" onclick="location.reload()">Exit</button>
+    </nav>
+</div>
+
+<script>
+    const ROSTER = {"1001":"Student A", "1002":"Student B", "1234":"Test User"};
+    const BANNED = ["badword", "attack", "kill"];
+    const QUOTES = ["YOU ARE ENOUGH", "KEEP GOING", "THINGS GET BETTER", "YOU BELONG HERE", "TAKE A DEEP BREATH", "IT IS OKAY TO NOT BE OKAY", "YOU MATTER"];
+    
+    let currentUser = null;
+    let currentAlias = "Anonymous";
+    let isAdminActive = false;
+    let idleTime = 0;
+    let posts = JSON.parse(localStorage.getItem('unmuted_posts_v8') || "[]");
+
+    function sanitize(str) { let t = document.createElement('div'); t.textContent = str; return t.innerHTML; }
+
+    function handleLogin() {
+        const id = document.getElementById('loginID').value.trim();
+        const code = document.getElementById('distCode').value.toUpperCase();
+        if(code !== "CLIFTON2026" || !ROSTER[id]) return alert("Access Denied.");
+        if(localStorage.getItem('strike_' + id)) return showOverlay('lock-overlay');
+        currentUser = id; nav('consent');
+    }
+
+    function saveProfile() {
+        const alias = document.getElementById('userAlias').value.trim();
+        if(!alias) return alert("Please choose a username.");
+        currentAlias = sanitize(alias);
+        document.getElementById('main-nav').style.display='flex';
+        nav('wall');
+        renderFeed('feed');
+    }
+
+    function prePostCheck() {
+        const val = document.getElementById('vInput').value.toLowerCase();
+        if(BANNED.some(w => val.includes(w))) showOverlay('warning-overlay');
+        else executePost();
+    }
+
+    function confirmPostAndLock() { executePost(); localStorage.setItem('strike_' + currentUser, 'true'); location.reload(); }
+
+    function executePost() {
+        const text = sanitize(document.getElementById('vInput').value); if(!text) return;
+        posts.unshift({ id: Date.now(), authorID: currentUser, alias: currentAlias, text: text, time: new Date().toLocaleString() });
+        saveAndRender(); document.getElementById('vInput').value = "";
+    }
+
+    function saveAndRender() { localStorage.setItem('unmuted_posts_v8', JSON.stringify(posts)); renderFeed('feed'); if(isAdminActive) renderFeed('admin-feed', true); }
+
+    function renderFeed(target, isAdmin = false) {
+        const container = document.getElementById(target); container.innerHTML = "";
+        posts.forEach(p => {
+            const card = document.createElement('div'); card.className = 'glass-card';
+            // Logic: Admins see ID + Alias. Students only see Alias.
+            let idLabel = isAdmin ? `ID: ${p.authorID} (@${p.alias})` : `💛 ${p.alias}`;
+            card.innerHTML = `<div style="display:flex; justify-content:space-between; font-size:0.7rem;"><span>${idLabel}</span><span>${p.time}</span></div><p>${p.text}</p>`;
+            container.appendChild(card);
+        });
+    }
+
+    function submitSecurityReport() {
+        let logs = JSON.parse(localStorage.getItem('SRO_SILO_v8') || "[]");
+        logs.push({ id: currentUser, alias: currentAlias, type: document.getElementById('threatType').value, msg: sanitize(document.getElementById('threatDetail').value), time: new Date().toLocaleString() });
+        localStorage.setItem('SRO_SILO_v8', JSON.stringify(logs)); alert("Sent to SRO."); nav('wall');
+    }
+
+    function adminGate() {
+        const k = prompt("Key:");
+        if(k === "MASTER2026") { isAdminActive = true; nav('admin'); renderFeed('admin-feed', true); }
+        if(k === "SRO_PROTECT_2026") { isAdminActive = true; loadSRO(); nav('sro-dash'); }
+    }
+
+    function loadSRO() {
+        const logs = JSON.parse(localStorage.getItem('SRO_SILO_v8') || "[]");
+        document.getElementById('sro-log').innerHTML = logs.reverse().map(r => `<div class="glass-card"><b>${r.type}</b><br><small>Reporter ID: ${r.id} (@${r.alias}) | ${r.time}</small><p>${r.msg}</p></div>`).join("");
+    }
+
+    function pardonStudent() { const id = prompt("Pardon ID:"); localStorage.removeItem('strike_' + id); alert("Restored."); }
+    function nav(id) { document.querySelectorAll('.screen').forEach(s => s.style.display='none'); document.getElementById('screen-'+id).style.display='block'; }
+    function showOverlay(id) { document.getElementById(id).style.display='flex'; }
+    function hideOverlay(id) { document.getElementById(id).style.display='none'; }
+
+    function resetTimer() { idleTime = 0; }
+    setInterval(function() {
+        if(isAdminActive) {
+            idleTime++; if (idleTime > 300) { alert("Session expired."); location.reload(); }
+        }
+    }, 1000);
+
+    let qIdx = 0;
+    setInterval(() => {
+        const qElem = document.getElementById('active-quote');
+        const container = document.getElementById('quote-bg');
+        container.style.opacity = 0;
+        setTimeout(() => {
+            qIdx = (qIdx + 1) % QUOTES.length;
+            qElem.innerText = QUOTES[qIdx];
+            container.style.opacity = 1;
+        }, 2000);
+    }, 8000);
+</script>
+</body>
+</html>
